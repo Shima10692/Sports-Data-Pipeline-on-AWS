@@ -13,6 +13,10 @@ data "archive_file" "code" {
   source_dir  = var.source_dir
   output_path = "${path.root}/.build/${local.name}.zip"
   excludes    = ["**/__pycache__/**", "**/*.pyc"]
+
+  # Same bytes on Windows and Linux: file modes differ per OS otherwise, which
+  # changes the hash and shows a phantom code update in every CI plan.
+  output_file_mode = "0644"
 }
 
 resource "aws_iam_role" "backfill" {
