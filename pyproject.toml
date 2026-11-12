@@ -7,4 +7,6 @@ requires-python = ">=3.12"
 [tool.pytest.ini_options]
 # Repo-wide checks live in tests/; each ingestion component keeps its own tests/ folder.
 testpaths = ["tests", "ingestion"]
-addopts = "-ra --strict-markers"
+# Each ingestion component has src/ (importable package) and tests/ (fakes in conftest.py).
+pythonpath = ["ingestion/backfill/src", "ingestion/backfill/tests"]
+addopts = "-ra --strict-markers --import-mode=importlib"

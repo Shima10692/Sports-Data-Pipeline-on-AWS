@@ -10,8 +10,9 @@ Practice data engineering project with live and historical sports data.
 |---|---|
 | 1. Bootstrap (state bucket, OIDC, deploy roles) | Applied — see `infra/bootstrap/README.md` |
 | 2. CI skeleton (fmt, validate, tests, Checkov, pytest, plan on PR) | Done |
-| 3. Storage (S3 raw + clean zones, Glue database) | In review |
-| 4. Batch backfill | Next |
+| 3. Storage (S3 raw + clean zones, Glue database) | Applied (dev, prod) |
+| 4. Batch backfill Lambda (StatsBomb, Jolpica, Cricsheet, TheSportsDB) | In review — see `ingestion/backfill/README.md` |
+| 5. Processing (Glue raw → Parquet) | Next |
 
 ## Layout
 ```
@@ -32,7 +33,7 @@ Both buckets are versioned, KMS-encrypted, private and TLS-only. Clean tables ar
 ## Checks (same as CI, `.github/workflows/pr.yml`)
 ```bash
 terraform fmt -check -recursive infra
-for d in infra/modules/state_backend infra/modules/github_env_roles infra/modules/data_lake infra/bootstrap; do
+for d in infra/modules/state_backend infra/modules/github_env_roles infra/modules/data_lake infra/modules/backfill_lambda infra/bootstrap; do
   (cd "$d" && terraform init -backend=false && terraform test)
 done
 pip install -r requirements-dev.txt
