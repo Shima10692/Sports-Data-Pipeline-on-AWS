@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars (gitignored) and adjust.
+aws_region        = "us-east-1"
+github_repository = "Shima10692/Sports-Data-Pipeline-on-AWS"
+
+# Set false if this AWS account already has a token.actions.githubusercontent.com provider.
+create_oidc_provider = true
+
+# Monthly cost alerts (optional). Put your real email only in terraform.tfvars.
+# budget_alert_email = "you@example.com"
+# monthly_budget_usd = 5
