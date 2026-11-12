@@ -10,6 +10,7 @@ One-off stack you run **locally** with admin credentials. It creates what GitHub
 | IAM role | `sports-github-<env>-plan` | Assumable from **pull requests** only. `ReadOnlyAccess` + read its own state + write its own lock file. Denied other stacks' state. |
 | IAM role | `sports-github-<env>-apply` | Assumable only by jobs running in the **GitHub Environment `<env>`**. Manages resources named `sports-<env>-*`. |
 | IAM policy | `sports-boundary-<env>` | Permissions boundary every role created by the apply role must carry, so it cannot escalate privileges. |
+| AWS Budget | `sports-monthly-cost` | Optional (set `budget_alert_email` in `terraform.tfvars`). Emails at 80% of actual and 100% of forecast monthly spend; default limit $5. |
 
 Cost: effectively nothing (a few KB of state in S3, IAM is free).
 

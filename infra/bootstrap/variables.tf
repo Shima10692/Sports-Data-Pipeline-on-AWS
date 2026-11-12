@@ -57,3 +57,25 @@ variable "state_version_retention_days" {
   type        = number
   default     = 90
 }
+
+variable "budget_alert_email" {
+  description = "Email for monthly cost alerts. Leave null to skip the budget. Set it in terraform.tfvars (gitignored), not in code."
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.budget_alert_email == null || can(regex("^[^@ ]+@[^@ ]+[.][^@ ]+$", var.budget_alert_email))
+    error_message = "budget_alert_email must be a valid email address."
+  }
+}
+
+variable "monthly_budget_usd" {
+  description = "Monthly cost budget in USD. Alerts at 80% of actual spend and 100% of forecast."
+  type        = number
+  default     = 5
+
+  validation {
+    condition     = var.monthly_budget_usd > 0
+    error_message = "monthly_budget_usd must be positive."
+  }
+}

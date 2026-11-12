@@ -111,3 +111,48 @@ run "rejects_bad_project" {
 
   expect_failures = [var.project]
 }
+
+run "no_budget_by_default" {
+  command = plan
+
+  # terraform test also reads a local terraform.tfvars, so pin the default explicitly.
+  variables {
+    budget_alert_email = null
+  }
+
+  assert {
+    condition     = length(aws_budgets_budget.monthly) == 0
+    error_message = "Budget should only be created when an email is set."
+  }
+}
+
+run "budget_with_email" {
+  command = apply
+
+  variables {
+    budget_alert_email = "alerts@example.com"
+  }
+
+  assert {
+    condition     = aws_budgets_budget.monthly[0].limit_amount == "5" && aws_budgets_budget.monthly[0].time_unit == "MONTHLY"
+    error_message = "Default budget should be 5 USD per month."
+  }
+  assert {
+    condition     = toset([for n in aws_budgets_budget.monthly[0].notification : n.notification_type]) == toset(["ACTUAL", "FORECASTED"])
+    error_message = "Budget needs an actual and a forecast alert."
+  }
+  assert {
+    condition     = alltrue([for n in aws_budgets_budget.monthly[0].notification : n.subscriber_email_addresses == toset(["alerts@example.com"])])
+    error_message = "Alerts must go to budget_alert_email."
+  }
+}
+
+run "rejects_bad_budget_email" {
+  command = plan
+
+  variables {
+    budget_alert_email = "not-an-email"
+  }
+
+  expect_failures = [var.budget_alert_email]
+}
