@@ -39,6 +39,7 @@ jobs:
         dir:
           - infra/modules/state_backend
           - infra/modules/github_env_roles
+          - infra/modules/data_lake
           - infra/bootstrap
           - infra/envs/dev
           - infra/envs/prod
