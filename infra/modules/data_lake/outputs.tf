@@ -18,6 +18,16 @@ output "clean_bucket_arn" {
   value       = aws_s3_bucket.zone["clean"].arn
 }
 
+output "artifacts_bucket_name" {
+  description = "Artifacts bucket: Glue scripts and packages, tmp/ for scratch."
+  value       = aws_s3_bucket.zone["artifacts"].bucket
+}
+
+output "artifacts_bucket_arn" {
+  description = "Artifacts bucket ARN."
+  value       = aws_s3_bucket.zone["artifacts"].arn
+}
+
 output "glue_database_name" {
   description = "Glue Data Catalog database for clean-zone tables."
   value       = aws_glue_catalog_database.lake.name

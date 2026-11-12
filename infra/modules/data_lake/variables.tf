@@ -46,6 +46,17 @@ variable "clean_noncurrent_version_days" {
   }
 }
 
+variable "artifacts_tmp_days" {
+  description = "Days before objects under tmp/ in the artifacts bucket expire."
+  type        = number
+  default     = 3
+
+  validation {
+    condition     = var.artifacts_tmp_days >= 1
+    error_message = "Must be at least 1 day."
+  }
+}
+
 variable "force_destroy" {
   description = "Allow Terraform to delete non-empty buckets. Keep false; never true for prod."
   type        = bool
