@@ -9,8 +9,9 @@ Practice data engineering project with live and historical sports data.
 | Phase | State |
 |---|---|
 | 1. Bootstrap (state bucket, OIDC, deploy roles) | Applied — see `infra/bootstrap/README.md` |
-| 2. CI skeleton (fmt, validate, tests, Checkov, pytest, plan on PR) | In review |
-| 3. Storage | Next |
+| 2. CI skeleton (fmt, validate, tests, Checkov, pytest, plan on PR) | Done |
+| 3. Storage (S3 raw + clean zones, Glue database) | In review |
+| 4. Batch backfill | Next |
 
 ## Layout
 ```
@@ -20,10 +21,18 @@ infra/modules        Reusable Terraform modules, each with offline tests
 ingestion/ dbt/ orchestration/ docs/
 ```
 
+## Data lake (per environment)
+| Zone | Bucket | Format | Rules |
+|---|---|---|---|
+| raw | `sports-<env>-raw-<account id>` | JSON as received, `source=<name>/date=<yyyy-mm-dd>/` | Append-only: deletes denied by bucket policy; overwrites keep the old version (90 days) |
+| clean | `sports-<env>-clean-<account id>` | Parquet, partitioned | Written by Glue; old versions kept 7 days |
+
+Both buckets are versioned, KMS-encrypted, private and TLS-only. Clean tables are registered in the Glue database `sports_<env>_lake`.
+
 ## Checks (same as CI, `.github/workflows/pr.yml`)
 ```bash
 terraform fmt -check -recursive infra
-for d in infra/modules/state_backend infra/modules/github_env_roles infra/bootstrap; do
+for d in infra/modules/state_backend infra/modules/github_env_roles infra/modules/data_lake infra/bootstrap; do
   (cd "$d" && terraform init -backend=false && terraform test)
 done
 pip install -r requirements-dev.txt
