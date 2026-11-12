@@ -9,7 +9,8 @@ Practice data engineering project with live and historical sports data.
 | Phase | State |
 |---|---|
 | 1. Bootstrap (state bucket, OIDC, deploy roles) | Applied — see `infra/bootstrap/README.md` |
-| 2. CI skeleton | Next |
+| 2. CI skeleton (fmt, validate, tests, Checkov, pytest, plan on PR) | In review |
+| 3. Storage | Next |
 
 ## Layout
 ```
@@ -19,9 +20,14 @@ infra/modules        Reusable Terraform modules, each with offline tests
 ingestion/ dbt/ orchestration/ docs/
 ```
 
-## Test
+## Checks (same as CI, `.github/workflows/pr.yml`)
 ```bash
+terraform fmt -check -recursive infra
 for d in infra/modules/state_backend infra/modules/github_env_roles infra/bootstrap; do
   (cd "$d" && terraform init -backend=false && terraform test)
 done
+pip install -r requirements-dev.txt
+pytest
+checkov --config-file .checkov.yaml   # on Windows: set PYTHONUTF8=1 first
 ```
+Every PR also gets a `terraform plan` for dev and prod posted as a comment, using the read-only plan roles via OIDC.

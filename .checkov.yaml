@@ -1,0 +1,13 @@
+# Checkov config used by CI (`checkov --config-file .checkov.yaml`) and locally.
+# Individual, justified skips live inline as `#checkov:skip=<ID>:<reason>` next to the resource.
+directory:
+  - infra
+  - .github
+framework:
+  - terraform
+  - github_actions
+skip-path:
+  - .terraform
+compact: true
+quiet: true
+download-external-modules: false

@@ -26,3 +26,4 @@ dbt/logs/
 # Provider lock files are committed for root stacks only, not reusable modules
 infra/modules/**/.terraform.lock.hcl
 tfplan
+plan.txt

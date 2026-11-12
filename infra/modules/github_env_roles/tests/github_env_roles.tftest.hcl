@@ -6,7 +6,7 @@ variables {
   project              = "sports"
   environment          = "dev"
   other_environments   = ["prod"]
-  github_repository    = "example-org/example-repo"
+  oidc_subject_prefix  = "repo:example-org/example-repo"
   oidc_provider_arn    = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
   state_bucket_arn     = "arn:aws:s3:::sports-tfstate-123456789012"
   other_state_prefixes = ["bootstrap", "prod"]
@@ -48,6 +48,15 @@ run "plan_role_is_read_only" {
   assert {
     condition     = aws_iam_role_policy_attachment.plan_read_only.policy_arn == "arn:aws:iam::aws:policy/ReadOnlyAccess"
     error_message = "Plan role should use ReadOnlyAccess."
+  }
+  assert {
+    # init lists workspaces under "env:/", so listing must not be limited to the env prefix.
+    condition = alltrue([
+      for p in [aws_iam_role_policy.plan_state.policy, aws_iam_role_policy.apply.policy] :
+      one([for s in jsondecode(p).Statement : s if s.Sid == "ListStateBucket"]).Resource == var.state_bucket_arn
+      && !can(one([for s in jsondecode(p).Statement : s if s.Sid == "ListStateBucket"]).Condition)
+    ])
+    error_message = "Both roles need unconditional ListBucket on the state bucket for terraform init."
   }
   assert {
     condition = one([

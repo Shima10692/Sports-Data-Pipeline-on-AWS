@@ -14,9 +14,18 @@ variable "other_environments" {
   default     = []
 }
 
-variable "github_repository" {
-  description = "GitHub repository allowed to assume the roles, as owner/name (case-sensitive)."
+variable "oidc_subject_prefix" {
+  description = <<-EOT
+    Start of the GitHub OIDC `sub` claim for the repository, without the trailing
+    context. Either "repo:<owner>/<name>" (legacy) or, for repos using immutable
+    subjects, "repo:<owner>@<owner id>/<name>@<repo id>". Matching is case-sensitive.
+  EOT
   type        = string
+
+  validation {
+    condition     = startswith(var.oidc_subject_prefix, "repo:") && !endswith(var.oidc_subject_prefix, ":")
+    error_message = "oidc_subject_prefix must start with \"repo:\" and must not end with \":\"."
+  }
 }
 
 variable "oidc_provider_arn" {

@@ -1,0 +1,3 @@
+# Tooling used by CI and local checks. Pinned for repeatable runs.
+pytest==9.1.1
+checkov==3.4.5
