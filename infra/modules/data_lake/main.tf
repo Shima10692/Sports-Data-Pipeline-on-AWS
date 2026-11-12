@@ -3,6 +3,8 @@
 #   <project>-<env>-raw-<account id>    raw zone: JSON exactly as received, append-only,
 #                                       laid out as source=<name>/date=<yyyy-mm-dd>/...
 #   <project>-<env>-clean-<account id>  clean zone: Parquet written by Glue (phase 5)
+#   <project>-<env>-artifacts-<account id>  job code (Glue scripts) and Glue temp files;
+#                                       tmp/ expires after var.artifacts_tmp_days
 #
 # plus a Glue Data Catalog database that clean-zone tables are registered in.
 # Bucket names carry the account ID because S3 names are global; it is looked up
@@ -18,6 +20,10 @@ locals {
     }
     clean = {
       bucket                  = "${local.env_prefix}-clean-${var.account_id}"
+      noncurrent_version_days = var.clean_noncurrent_version_days
+    }
+    artifacts = {
+      bucket                  = "${local.env_prefix}-artifacts-${var.account_id}"
       noncurrent_version_days = var.clean_noncurrent_version_days
     }
   }
@@ -97,6 +103,25 @@ resource "aws_s3_bucket_lifecycle_configuration" "zone" {
 
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
+    }
+  }
+
+  # Scratch space (Glue --TempDir, Spark spill) is never needed after a run.
+  dynamic "rule" {
+    for_each = each.key == "artifacts" ? [1] : []
+    content {
+      id     = "expire-tmp"
+      status = "Enabled"
+      filter {
+        prefix = "tmp/"
+      }
+      expiration {
+        days = var.artifacts_tmp_days
+      }
+
+      abort_incomplete_multipart_upload {
+        days_after_initiation = 1
+      }
     }
   }
 

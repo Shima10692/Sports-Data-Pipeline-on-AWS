@@ -9,6 +9,7 @@ A data engineering practice project: ingest live and historical sports data on A
 ```
 /infra               Terraform: modules/ + envs/dev, envs/prod
 /ingestion           Lambda pollers, ECS Fargate (websockets + OpenF1 replay), batch backfill
+/processing          Glue jobs: raw JSON → clean Parquet + Glue Catalog
 /dbt                 dbt project (dbt-athena first; dbt-redshift optional)
 /orchestration       Airflow DAGs for MWAA (or Step Functions definitions)
 /.github/workflows   CI/CD

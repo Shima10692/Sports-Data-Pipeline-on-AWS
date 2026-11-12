@@ -17,3 +17,8 @@ output "backfill_function_name" {
   description = "Backfill Lambda; invoke with aws lambda invoke --function-name <this> --payload '{\"source\": \"jolpica\"}'."
   value       = module.backfill.function_name
 }
+
+output "glue_job_name" {
+  description = "Raw-to-clean Glue job; run with aws glue start-job-run --job-name <this> [--arguments '{\"--sources\":\"jolpica\"}']."
+  value       = module.processing.job_name
+}

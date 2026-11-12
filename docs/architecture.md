@@ -26,11 +26,11 @@ Kinesis Data Streams → Kinesis Data Firehose → S3 raw (JSON).
 
 ## 4. Storage
 - **S3 raw zone:** JSON, partitioned by `source=<name>/date=<yyyy-mm-dd>/`. Append-only.
-- **S3 clean zone:** Parquet, partitioned.
+- **S3 clean zone:** Parquet, one prefix per table, partitioned by `dt=<yyyy-mm-dd>` (the raw `date=`).
 - **Glue Data Catalog:** table definitions for the clean zone.
 
 ## 5. Processing
-Glue jobs convert raw JSON → Parquet in the clean zone and update the Catalog.
+A Glue 5.0 Spark job converts raw JSON → Parquet in the clean zone with explicit, tested schemas, rewrites only the `dt` partitions it processes (idempotent), and registers tables and partitions in the Catalog itself (no crawler). Details: `processing/glue/README.md`.
 
 ## 6. Warehouse
 Amazon Athena (low cost, default) or Redshift Serverless.

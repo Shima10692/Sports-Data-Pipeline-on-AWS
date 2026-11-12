@@ -27,3 +27,21 @@ module "backfill" {
   raw_bucket_arn  = module.data_lake.raw_bucket_arn
   source_dir      = "${path.root}/../../../ingestion/backfill/src"
 }
+
+# Phase 5: Glue job turning raw JSON into clean-zone Parquet + Glue Catalog tables.
+module "processing" {
+  source = "../../modules/glue_etl"
+
+  project               = var.project
+  environment           = "prod"
+  account_id            = data.aws_caller_identity.current.account_id
+  region                = var.aws_region
+  raw_bucket_name       = module.data_lake.raw_bucket_name
+  raw_bucket_arn        = module.data_lake.raw_bucket_arn
+  clean_bucket_name     = module.data_lake.clean_bucket_name
+  clean_bucket_arn      = module.data_lake.clean_bucket_arn
+  artifacts_bucket_name = module.data_lake.artifacts_bucket_name
+  artifacts_bucket_arn  = module.data_lake.artifacts_bucket_arn
+  glue_database_name    = module.data_lake.glue_database_name
+  source_dir            = "${path.root}/../../../processing/glue"
+}

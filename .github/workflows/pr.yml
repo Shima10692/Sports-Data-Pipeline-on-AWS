@@ -41,6 +41,7 @@ jobs:
           - infra/modules/github_env_roles
           - infra/modules/data_lake
           - infra/modules/backfill_lambda
+          - infra/modules/glue_etl
           - infra/bootstrap
           - infra/envs/dev
           - infra/envs/prod

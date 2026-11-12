@@ -5,8 +5,8 @@ description = "Practice data engineering pipeline for live and historical sports
 requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
-# Repo-wide checks live in tests/; each ingestion component keeps its own tests/ folder.
-testpaths = ["tests", "ingestion"]
-# Each ingestion component has src/ (importable package) and tests/ (fakes in conftest.py).
-pythonpath = ["ingestion/backfill/src", "ingestion/backfill/tests"]
+# Repo-wide checks live in tests/; each component keeps its own tests/ folder.
+testpaths = ["tests", "ingestion", "processing"]
+# Each component has src/ (importable package) and tests/ (fakes in conftest.py).
+pythonpath = ["ingestion/backfill/src", "ingestion/backfill/tests", "processing/glue/src"]
 addopts = "-ra --strict-markers --import-mode=importlib"

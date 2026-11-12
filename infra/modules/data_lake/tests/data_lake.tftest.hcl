@@ -21,6 +21,10 @@ run "names_follow_env_prefix" {
     error_message = "Buckets must sit under the env prefix the apply role is allowed to manage."
   }
   assert {
+    condition     = output.artifacts_bucket_name == "sports-dev-artifacts-123456789012"
+    error_message = "Artifacts bucket must follow the same naming rule."
+  }
+  assert {
     condition     = output.glue_database_name == "sports_dev_lake"
     error_message = "Glue database name must be sports_<env>_lake."
   }
@@ -93,6 +97,21 @@ run "retention_defaults" {
   assert {
     condition     = one(one(aws_s3_bucket_lifecycle_configuration.zone["clean"].rule).noncurrent_version_expiration).noncurrent_days == 7
     error_message = "Clean noncurrent versions should be kept 7 days by default."
+  }
+}
+
+run "artifacts_tmp_expires" {
+  command = apply
+
+  assert {
+    condition = one([
+      for r in aws_s3_bucket_lifecycle_configuration.zone["artifacts"].rule : one(r.expiration).days if r.id == "expire-tmp"
+    ]) == 3
+    error_message = "Artifacts tmp/ should expire after 3 days."
+  }
+  assert {
+    condition     = length(aws_s3_bucket_lifecycle_configuration.zone["raw"].rule) == 1 && length(aws_s3_bucket_lifecycle_configuration.zone["clean"].rule) == 1
+    error_message = "Only the artifacts bucket gets the tmp/ expiry rule."
   }
 }
 
