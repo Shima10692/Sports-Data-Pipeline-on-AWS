@@ -1,0 +1,10 @@
+[project]
+name = "sports-data-pipeline"
+version = "0.1.0"
+description = "Practice data engineering pipeline for live and historical sports data on AWS."
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+# Repo-wide checks live in tests/; each ingestion component keeps its own tests/ folder.
+testpaths = ["tests", "ingestion"]
+addopts = "-ra --strict-markers"

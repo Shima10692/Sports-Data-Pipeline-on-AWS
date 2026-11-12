@@ -90,11 +90,12 @@ resource "aws_iam_role_policy" "plan_state" {
     Statement = concat(
       [
         {
-          Sid       = "ListOwnStatePrefix"
-          Effect    = "Allow"
-          Action    = "s3:ListBucket"
-          Resource  = var.state_bucket_arn
-          Condition = { StringLike = { "s3:prefix" = ["${var.environment}/*"] } }
+          # `terraform init` lists workspaces under the "env:/" prefix, so listing
+          # is allowed bucket-wide. It exposes key names only; reads stay scoped below.
+          Sid      = "ListStateBucket"
+          Effect   = "Allow"
+          Action   = "s3:ListBucket"
+          Resource = var.state_bucket_arn
         },
         {
           Sid      = "ReadOwnState"
@@ -202,11 +203,12 @@ resource "aws_iam_role_policy" "apply" {
       [
         # --- Terraform state (own prefix only)
         {
-          Sid       = "ListOwnStatePrefix"
-          Effect    = "Allow"
-          Action    = "s3:ListBucket"
-          Resource  = var.state_bucket_arn
-          Condition = { StringLike = { "s3:prefix" = ["${var.environment}/*"] } }
+          # `terraform init` lists workspaces under the "env:/" prefix, so listing
+          # is allowed bucket-wide. It exposes key names only; reads stay scoped below.
+          Sid      = "ListStateBucket"
+          Effect   = "Allow"
+          Action   = "s3:ListBucket"
+          Resource = var.state_bucket_arn
         },
         {
           Sid      = "ReadWriteOwnState"

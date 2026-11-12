@@ -1,0 +1,179 @@
+name: PR checks
+
+on:
+  pull_request:
+    branches: [main]
+
+# One run per PR; a new push cancels the old run.
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: 1.15.8
+  TF_IN_AUTOMATION: "1"
+  TF_INPUT: "0"
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  terraform-fmt:
+    name: terraform fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - run: terraform fmt -check -recursive -diff infra
+
+  terraform-validate-test:
+    name: validate + test (${{ matrix.dir }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - infra/modules/state_backend
+          - infra/modules/github_env_roles
+          - infra/bootstrap
+          - infra/envs/dev
+          - infra/envs/prod
+    defaults:
+      run:
+        working-directory: ${{ matrix.dir }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - run: terraform init -backend=false
+      - run: terraform validate
+      - name: terraform test (offline, mocked AWS provider)
+        run: |
+          if [ -d tests ]; then terraform test; else echo "No tests in ${{ matrix.dir }}"; fi
+
+  checkov:
+    name: checkov
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: checkov --config-file .checkov.yaml
+
+  pytest:
+    name: pytest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: pytest
+
+  plan:
+    name: terraform plan (${{ matrix.env }})
+    needs: [terraform-fmt, terraform-validate-test]
+    # Fork PRs get no OIDC token, so plans only run for branches in this repo.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC token for AWS
+      pull-requests: write # post the plan as a comment
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - env: dev
+            role: AWS_PLAN_ROLE_DEV
+          - env: prod
+            role: AWS_PLAN_ROLE_PROD
+    defaults:
+      run:
+        working-directory: infra/envs/${{ matrix.env }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars[matrix.role] }}
+          role-session-name: gha-plan-${{ matrix.env }}-pr${{ github.event.pull_request.number }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform init
+        run: >
+          terraform init
+          -backend-config="bucket=${{ vars.TF_STATE_BUCKET }}"
+          -backend-config="region=${{ vars.AWS_REGION }}"
+
+      - name: terraform plan
+        id: plan
+        env:
+          TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+        run: |
+          set +e
+          terraform plan -no-color -lock-timeout=120s -detailed-exitcode -out=tfplan > plan.txt 2>&1
+          code=$?
+          set -e
+          cat plan.txt
+          # 0 = no changes, 2 = changes, 1 = error
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 1 ]; then exit 1; fi
+
+      - name: Comment plan on PR
+        if: always() && steps.plan.outcome != 'skipped'
+        uses: actions/github-script@v7
+        env:
+          PLAN_ENV: ${{ matrix.env }}
+          PLAN_EXIT: ${{ steps.plan.outputs.exitcode }}
+          PLAN_FILE: infra/envs/${{ matrix.env }}/plan.txt
+        with:
+          script: |
+            const fs = require('fs');
+            const env = process.env.PLAN_ENV;
+            const marker = `<!-- terraform-plan:${env} -->`;
+            let plan = fs.existsSync(process.env.PLAN_FILE)
+              ? fs.readFileSync(process.env.PLAN_FILE, 'utf8')
+              : 'No plan output.';
+            const max = 60000;
+            if (plan.length > max) plan = plan.slice(-max) + '\n\n… (truncated, see the job log)';
+            const status = { '0': '✅ No changes', '2': '📝 Changes', '1': '❌ Failed' }[process.env.PLAN_EXIT] ?? '❌ Failed';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              marker,
+              `### Terraform plan: \`${env}\` — ${status}`,
+              `Commit ${context.payload.pull_request.head.sha.slice(0, 7)} · [run log](${runUrl})`,
+              '<details><summary>Show plan</summary>',
+              '',
+              '```',
+              plan,
+              '```',
+              '</details>',
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find(c => c.user.type === 'Bot' && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
