@@ -40,6 +40,13 @@ A data engineering practice project: ingest live and historical sports data on A
 11. **Deploy pipeline** — merge-to-main workflow and prod promotion with GitHub Environments approval.
 12. **Outputs** — QuickSight dashboards, analysis notebooks.
 
+## Architecture changes (version-controlled, never overwritten)
+- Any change to the architecture (new, removed or swapped component, engine, data flow, storage layout, orchestration or deployment) gets a new version. Follow `docs/architecture/README.md`.
+- Before changing a diagram or `docs/architecture.md`, make sure the current version is archived in `docs/architecture/versions/`.
+- Write an ADR in `docs/architecture/decisions/`, add a `docs/architecture/CHANGELOG.md` entry, and save the new diagrams in a new `versions/vX.Y.Z/` folder.
+- Never edit, rename or delete anything under `docs/architecture/versions/`.
+- Current version: **v1.1.0** (temporary Lambda stand-in for Glue in phase 5, see ADR-0001).
+
 ## Working style
 - Ask before creating anything that costs money beyond the free tier (MWAA, Redshift, QuickSight, Fargate running 24/7).
 - Keep changes small. Explain what you built in the PR description.
