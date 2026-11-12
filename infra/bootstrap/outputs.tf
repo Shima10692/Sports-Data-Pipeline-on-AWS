@@ -8,6 +8,11 @@ output "aws_region" {
   value       = var.aws_region
 }
 
+output "oidc_subject_prefix" {
+  description = "Prefix the roles expect in the GitHub OIDC sub claim."
+  value       = local.oidc_subject_prefix
+}
+
 output "oidc_provider_arn" {
   description = "GitHub Actions OIDC provider."
   value       = local.oidc_provider_arn

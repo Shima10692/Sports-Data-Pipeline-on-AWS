@@ -6,7 +6,7 @@ variables {
   project              = "sports"
   environment          = "dev"
   other_environments   = ["prod"]
-  github_repository    = "example-org/example-repo"
+  oidc_subject_prefix  = "repo:example-org/example-repo"
   oidc_provider_arn    = "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
   state_bucket_arn     = "arn:aws:s3:::sports-tfstate-123456789012"
   other_state_prefixes = ["bootstrap", "prod"]

@@ -16,8 +16,8 @@ locals {
   other_state_arns = [for p in var.other_state_prefixes : "${var.state_bucket_arn}/${p}/*"]
 
   subjects = {
-    plan  = "repo:${var.github_repository}:pull_request"
-    apply = "repo:${var.github_repository}:environment:${var.environment}"
+    plan  = "${var.oidc_subject_prefix}:pull_request"
+    apply = "${var.oidc_subject_prefix}:environment:${var.environment}"
   }
 
   boundary_name = "${var.project}-boundary-${var.environment}"

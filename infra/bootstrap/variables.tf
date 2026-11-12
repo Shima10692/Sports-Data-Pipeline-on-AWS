@@ -79,3 +79,20 @@ variable "monthly_budget_usd" {
     error_message = "monthly_budget_usd must be positive."
   }
 }
+
+variable "github_owner_id" {
+  description = "Numeric ID of the repo owner. Set together with github_repository_id when the repo uses immutable OIDC subjects (gh api repos/<owner>/<repo>/actions/oidc/customization/sub)."
+  type        = number
+  default     = null
+}
+
+variable "github_repository_id" {
+  description = "Numeric ID of the repo. Set together with github_owner_id for immutable OIDC subjects."
+  type        = number
+  default     = null
+
+  validation {
+    condition     = (var.github_repository_id == null) == (var.github_owner_id == null)
+    error_message = "Set both github_owner_id and github_repository_id, or neither."
+  }
+}

@@ -156,3 +156,42 @@ run "rejects_bad_budget_email" {
 
   expect_failures = [var.budget_alert_email]
 }
+
+run "legacy_subject_by_default" {
+  command = plan
+
+  variables {
+    github_owner_id      = null
+    github_repository_id = null
+  }
+
+  assert {
+    condition     = output.oidc_subject_prefix == "repo:example-org/example-repo"
+    error_message = "Without IDs the legacy subject format should be used."
+  }
+}
+
+run "immutable_subject_with_ids" {
+  command = apply
+
+  variables {
+    github_owner_id      = 42
+    github_repository_id = 4242
+  }
+
+  assert {
+    condition     = output.oidc_subject_prefix == "repo:example-org@42/example-repo@4242"
+    error_message = "Immutable subject prefix is wrong."
+  }
+}
+
+run "rejects_only_one_id" {
+  command = plan
+
+  variables {
+    github_owner_id      = 42
+    github_repository_id = null
+  }
+
+  expect_failures = [var.github_repository_id]
+}
