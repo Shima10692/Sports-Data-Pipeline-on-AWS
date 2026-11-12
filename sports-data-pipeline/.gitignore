@@ -1,0 +1,28 @@
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+crash.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# Secrets
+.env
+*.pem
+
+# OS
+.DS_Store
+
+# Provider lock files are committed for root stacks only, not reusable modules
+infra/modules/**/.terraform.lock.hcl
+tfplan
