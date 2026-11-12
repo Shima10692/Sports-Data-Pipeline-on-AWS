@@ -12,3 +12,8 @@ output "glue_database_name" {
   description = "Glue Data Catalog database for clean-zone tables."
   value       = module.data_lake.glue_database_name
 }
+
+output "backfill_function_name" {
+  description = "Backfill Lambda; invoke with aws lambda invoke --function-name <this> --payload '{\"source\": \"jolpica\"}'."
+  value       = module.backfill.function_name
+}

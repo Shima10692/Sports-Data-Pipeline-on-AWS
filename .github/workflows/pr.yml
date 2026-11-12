@@ -16,7 +16,7 @@ env:
   TF_VERSION: 1.15.8
   TF_IN_AUTOMATION: "1"
   TF_INPUT: "0"
-  PYTHON_VERSION: "3.12"
+  PYTHON_VERSION: "3.13" # matches the Lambda runtime
 
 jobs:
   terraform-fmt:
@@ -40,6 +40,7 @@ jobs:
           - infra/modules/state_backend
           - infra/modules/github_env_roles
           - infra/modules/data_lake
+          - infra/modules/backfill_lambda
           - infra/bootstrap
           - infra/envs/dev
           - infra/envs/prod

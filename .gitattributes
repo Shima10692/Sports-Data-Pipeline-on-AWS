@@ -1,0 +1,5 @@
+# LF everywhere, so Lambda zips (and their hashes) are identical on Windows and in CI.
+* text=auto eol=lf
+*.pdf binary
+*.png binary
+*.zip binary

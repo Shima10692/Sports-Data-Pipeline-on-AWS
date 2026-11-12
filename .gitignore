@@ -27,3 +27,6 @@ dbt/logs/
 infra/modules/**/.terraform.lock.hcl
 tfplan
 plan.txt
+
+# Lambda zips built by archive_file
+**/.build/
