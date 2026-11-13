@@ -114,6 +114,8 @@ resource "aws_iam_role_policy" "glue" {
           "glue:GetDatabase",
           "glue:GetTable", "glue:CreateTable", "glue:UpdateTable",
           "glue:GetPartition", "glue:GetPartitions",
+          # BatchUpdatePartition is authorized per partition as glue:UpdatePartition (re-runs fail without it).
+          "glue:UpdatePartition",
           "glue:BatchCreatePartition", "glue:BatchUpdatePartition", "glue:BatchGetPartition",
         ]
         Resource = [local.catalog_arn, local.database_arn, local.tables_arn]
