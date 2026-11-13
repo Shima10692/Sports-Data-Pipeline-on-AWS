@@ -1,6 +1,6 @@
 output "job_name" {
-  description = "Glue job name; start with aws glue start-job-run --job-name <this>."
-  value       = aws_glue_job.raw_to_clean.name
+  description = "Glue job name; start with aws glue start-job-run --job-name <this>. Null when create_job is false."
+  value       = one(aws_glue_job.raw_to_clean[*].name)
 }
 
 output "role_arn" {

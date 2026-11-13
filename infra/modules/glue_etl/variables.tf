@@ -114,3 +114,9 @@ variable "log_retention_days" {
   type        = number
   default     = 14
 }
+
+variable "create_job" {
+  description = "Create the Glue job. False while the account cannot create Glue jobs (the Lambda engine runs instead)."
+  type        = bool
+  default     = true
+}

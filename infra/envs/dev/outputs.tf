@@ -19,6 +19,11 @@ output "backfill_function_name" {
 }
 
 output "glue_job_name" {
-  description = "Raw-to-clean Glue job; run with aws glue start-job-run --job-name <this> [--arguments '{\"--sources\":\"jolpica\"}']."
+  description = "Raw-to-clean Glue job (null while processing_engine = \"lambda\"); run with aws glue start-job-run --job-name <this>."
   value       = module.processing.job_name
+}
+
+output "raw_to_clean_function_name" {
+  description = "Stopgap raw-to-clean Lambda (null while processing_engine = \"glue\"); invoke with --payload '{\"sources\": \"jolpica\"}'."
+  value       = one(module.processing_lambda[*].function_name)
 }

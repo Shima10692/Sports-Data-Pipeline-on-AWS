@@ -149,6 +149,10 @@ resource "aws_cloudwatch_log_group" "job" {
 # ---------------------------------------------------------------- job
 
 resource "aws_glue_job" "raw_to_clean" {
+  # Off while Glue job creation is blocked on the account; everything else in this
+  # module (role, code, logs) stays deployed so switching back is one variable.
+  count = var.create_job ? 1 : 0
+
   #checkov:skip=CKV_AWS_195:A security configuration encrypts logs/bookmarks with a customer KMS key ($1/month each); S3 data is already KMS-encrypted by bucket default.
   name        = local.name
   description = "Raw JSON to clean-zone Parquet for ${var.environment}; registers tables and partitions in ${var.glue_database_name}."

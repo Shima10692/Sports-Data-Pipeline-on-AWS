@@ -29,41 +29,41 @@ run "job_config" {
   command = apply
 
   assert {
-    condition     = aws_glue_job.raw_to_clean.name == "sports-dev-raw-to-clean" && aws_glue_job.raw_to_clean.glue_version == "5.0"
+    condition     = aws_glue_job.raw_to_clean[0].name == "sports-dev-raw-to-clean" && aws_glue_job.raw_to_clean[0].glue_version == "5.0"
     error_message = "Job must be <project>-<env>-raw-to-clean on Glue 5.0."
   }
   assert {
-    condition     = aws_glue_job.raw_to_clean.execution_class == "FLEX" && aws_glue_job.raw_to_clean.worker_type == "G.1X" && aws_glue_job.raw_to_clean.number_of_workers == 2
+    condition     = aws_glue_job.raw_to_clean[0].execution_class == "FLEX" && aws_glue_job.raw_to_clean[0].worker_type == "G.1X" && aws_glue_job.raw_to_clean[0].number_of_workers == 2
     error_message = "Defaults must be the cheapest config: Flex, G.1X, 2 workers."
   }
   assert {
-    condition     = aws_glue_job.raw_to_clean.timeout == 30 && aws_glue_job.raw_to_clean.max_retries == 0
+    condition     = aws_glue_job.raw_to_clean[0].timeout == 30 && aws_glue_job.raw_to_clean[0].max_retries == 0
     error_message = "A 30-minute timeout caps cost; retries belong to the orchestrator."
   }
   assert {
-    condition     = one(aws_glue_job.raw_to_clean.command).script_location == "s3://sports-dev-artifacts-123456789012/glue/sports-dev-raw-to-clean/glue_entry.py"
+    condition     = one(aws_glue_job.raw_to_clean[0].command).script_location == "s3://sports-dev-artifacts-123456789012/glue/sports-dev-raw-to-clean/glue_entry.py"
     error_message = "Script must be the uploaded glue_entry.py."
   }
   assert {
-    condition     = aws_glue_job.raw_to_clean.default_arguments["--extra-py-files"] == "s3://sports-dev-artifacts-123456789012/glue/sports-dev-raw-to-clean/clean_zone.zip"
+    condition     = aws_glue_job.raw_to_clean[0].default_arguments["--extra-py-files"] == "s3://sports-dev-artifacts-123456789012/glue/sports-dev-raw-to-clean/clean_zone.zip"
     error_message = "The clean_zone package must be passed with --extra-py-files."
   }
   assert {
     condition = (
-      aws_glue_job.raw_to_clean.default_arguments["--raw_bucket"] == var.raw_bucket_name &&
-      aws_glue_job.raw_to_clean.default_arguments["--clean_bucket"] == var.clean_bucket_name &&
-      aws_glue_job.raw_to_clean.default_arguments["--database"] == "sports_dev_lake" &&
-      aws_glue_job.raw_to_clean.default_arguments["--sources"] == "all" &&
-      aws_glue_job.raw_to_clean.default_arguments["--dates"] == "all"
+      aws_glue_job.raw_to_clean[0].default_arguments["--raw_bucket"] == var.raw_bucket_name &&
+      aws_glue_job.raw_to_clean[0].default_arguments["--clean_bucket"] == var.clean_bucket_name &&
+      aws_glue_job.raw_to_clean[0].default_arguments["--database"] == "sports_dev_lake" &&
+      aws_glue_job.raw_to_clean[0].default_arguments["--sources"] == "all" &&
+      aws_glue_job.raw_to_clean[0].default_arguments["--dates"] == "all"
     )
     error_message = "Every argument glue_entry.py reads needs a default."
   }
   assert {
-    condition     = startswith(aws_glue_job.raw_to_clean.default_arguments["--TempDir"], "s3://sports-dev-artifacts-123456789012/tmp/")
+    condition     = startswith(aws_glue_job.raw_to_clean[0].default_arguments["--TempDir"], "s3://sports-dev-artifacts-123456789012/tmp/")
     error_message = "TempDir must sit under tmp/ so the lifecycle rule cleans it up."
   }
   assert {
-    condition     = aws_glue_job.raw_to_clean.default_arguments["--continuous-log-logGroup"] == aws_cloudwatch_log_group.job.name && aws_cloudwatch_log_group.job.retention_in_days == 14
+    condition     = aws_glue_job.raw_to_clean[0].default_arguments["--continuous-log-logGroup"] == aws_cloudwatch_log_group.job.name && aws_cloudwatch_log_group.job.retention_in_days == 14
     error_message = "Logs go to a Terraform-managed group with 14-day retention."
   }
 }
@@ -118,6 +118,23 @@ run "code_is_uploaded" {
   assert {
     condition     = data.archive_file.package.output_size > 0 && fileexists("${var.source_dir}/src/clean_zone/job.py")
     error_message = "Package zip must contain clean_zone."
+  }
+}
+
+run "job_can_be_switched_off" {
+  command = apply
+
+  variables {
+    create_job = false
+  }
+
+  assert {
+    condition     = length(aws_glue_job.raw_to_clean) == 0 && output.job_name == null
+    error_message = "create_job = false must skip only the job."
+  }
+  assert {
+    condition     = aws_iam_role.glue.name == "sports-dev-raw-to-clean" && aws_s3_object.package.key == "glue/sports-dev-raw-to-clean/clean_zone.zip"
+    error_message = "Role and code stay deployed so switching back needs no other change."
   }
 }
 

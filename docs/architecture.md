@@ -30,7 +30,7 @@ Kinesis Data Streams → Kinesis Data Firehose → S3 raw (JSON).
 - **Glue Data Catalog:** table definitions for the clean zone.
 
 ## 5. Processing
-A Glue 5.0 Spark job converts raw JSON → Parquet in the clean zone with explicit, tested schemas, rewrites only the `dt` partitions it processes (idempotent), and registers tables and partitions in the Catalog itself (no crawler). Details: `processing/glue/README.md`.
+A Glue 5.0 Spark job converts raw JSON → Parquet in the clean zone with explicit, tested schemas, rewrites only the `dt` partitions it processes (idempotent), and registers tables and partitions in the Catalog itself (no crawler). Details: `processing/glue/README.md`. *Temporarily* the same code runs in a Lambda (`processing_engine = "lambda"`) while Glue job creation is blocked on the account. It writes identical output and goes back to Glue once AWS Support lifts the block.
 
 ## 6. Warehouse
 Amazon Athena (low cost, default) or Redshift Serverless.
