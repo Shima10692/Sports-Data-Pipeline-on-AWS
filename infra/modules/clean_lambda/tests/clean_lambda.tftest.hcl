@@ -100,6 +100,14 @@ run "role_is_bounded_and_scoped" {
     error_message = "Catalog access must be limited to the env database."
   }
   assert {
+    # Re-runs update existing partitions; Glue authorizes BatchUpdatePartition as glue:UpdatePartition.
+    condition = alltrue([
+      for a in ["glue:BatchCreatePartition", "glue:BatchUpdatePartition", "glue:UpdatePartition"] :
+      contains(flatten([for s in jsondecode(aws_iam_role_policy.fn.policy).Statement : s.Action if s.Sid == "CatalogTablesAndPartitions"]), a)
+    ])
+    error_message = "The role must be able to create and update partitions, or re-runs fail."
+  }
+  assert {
     condition     = !strcontains(aws_iam_role_policy.fn.policy, "glue:Delete") && !strcontains(aws_iam_role_policy.fn.policy, "glue:CreateJob")
     error_message = "The function never deletes catalog objects or touches Glue jobs."
   }
