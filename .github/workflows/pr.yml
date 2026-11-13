@@ -43,6 +43,7 @@ jobs:
           - infra/modules/backfill_lambda
           - infra/modules/glue_etl
           - infra/modules/clean_lambda
+          - infra/modules/athena_warehouse
           - infra/bootstrap
           - infra/envs/dev
           - infra/envs/prod
@@ -86,6 +87,28 @@ jobs:
           cache-dependency-path: requirements-dev.txt
       - run: pip install -r requirements-dev.txt
       - run: pytest
+
+  dbt:
+    name: dbt parse
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt
+    env:
+      # parse never connects to AWS; the profile only needs a well-formed account ID.
+      DBT_AWS_ACCOUNT_ID: "000000000000"
+      DBT_PROFILES_DIR: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: dbt/requirements.txt
+      - run: pip install -r requirements.txt
+      # Compiles every model, test and unit test definition: bad refs, YAML or Jinja fail here.
+      # dbt build runs against dev from the phase-9 orchestration / phase-11 deploy role.
+      - run: dbt parse --no-partial-parse
 
   plan:
     name: terraform plan (${{ matrix.env }})

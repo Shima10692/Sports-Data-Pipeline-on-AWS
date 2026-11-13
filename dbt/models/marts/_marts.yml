@@ -1,0 +1,178 @@
+version: 2
+
+models:
+  - name: dim_session
+    description: >
+      One row per sporting session: a football match (StatsBomb), a cricket match (Cricsheet),
+      or an F1 race, qualifying or sprint session (Jolpica).
+    columns:
+      - name: session_key
+        description: Surrogate key, md5 of 'session|<source>|<source_session_id>'.
+        data_tests: [unique, not_null]
+      - name: sport
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [football, cricket, f1]
+      - name: source
+        data_tests: [not_null]
+      - name: source_session_id
+        description: Id in the source. F1 uses <season>-<round>-<session_type>.
+        data_tests: [not_null]
+      - name: session_type
+        description: football 'match'; cricket match type (T20, ODI, Test, ...); F1 race, qualifying or sprint.
+        data_tests: [not_null]
+      - name: session_date
+        data_tests: [not_null]
+      - name: home_team_key
+        description: Football home team; cricket team_1 as listed by Cricsheet; null for F1.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_team')
+                field: team_key
+      - name: away_team_key
+        description: Football away team; cricket team_2; null for F1.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_team')
+                field: team_key
+      - name: home_score
+        description: Football goals after extra time (shoot-out excluded). Null for other sports.
+      - name: winner_team_key
+        description: >
+          Football: higher score after extra time (null for a draw, even if decided on penalties).
+          Cricket: winner, or the super-over winner of a tie. F1: constructor of the race or sprint winner.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_team')
+                field: team_key
+      - name: result_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [win, draw, tie, no result, unknown]
+
+  - name: dim_team
+    description: >
+      One row per team per source: StatsBomb football teams, Cricsheet cricket teams (by name),
+      Jolpica F1 constructors. Name and attributes from the most recent appearance.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [source, source_team_id]
+    columns:
+      - name: team_key
+        description: Surrogate key, md5 of 'team|<source>|<source_team_id>'.
+        data_tests: [unique, not_null]
+      - name: sport
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [football, cricket, f1]
+      - name: team_name
+        data_tests: [not_null]
+
+  - name: dim_player
+    description: >
+      One row per player per source: StatsBomb footballers, Cricsheet cricketers (by name),
+      Jolpica F1 drivers. Attributes from the most recent appearance.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [source, source_player_id]
+    columns:
+      - name: player_key
+        description: Surrogate key, md5 of 'player|<source>|<source_player_id>'.
+        data_tests: [unique, not_null]
+      - name: sport
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [football, cricket, f1]
+      - name: player_name
+        data_tests: [not_null]
+      - name: short_code
+        description: F1 three-letter driver code, e.g. VER.
+      - name: latest_team_key
+        description: Team of the player's most recent appearance.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_team')
+                field: team_key
+
+  - name: fact_events
+    description: >
+      One row per in-session event: football events (StatsBomb), cricket deliveries (Cricsheet),
+      F1 pit stops (Jolpica). Sport-specific measures are null for the other sports.
+    columns:
+      - name: event_key
+        description: Surrogate key, md5 of 'event|<source>|<source_event_id>'.
+        data_tests: [unique, not_null]
+      - name: sport
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [football, cricket, f1]
+      - name: source_event_id
+        description: Football StatsBomb event UUID; cricket <match>-<innings>-<over>-<ball>; F1 <season>-<round>-<driver>-<stop>.
+        data_tests: [not_null]
+      - name: session_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_session')
+                field: session_key
+      - name: event_date
+        data_tests: [not_null]
+      - name: team_key
+        description: Football acting team; cricket batting team; F1 constructor.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_team')
+                field: team_key
+      - name: player_key
+        description: Football acting player (null for team events such as Half Start); cricket batter; F1 driver.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_player')
+                field: player_key
+      - name: secondary_player_key
+        description: Football pass recipient; cricket bowler; null for F1.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_player')
+                field: player_key
+      - name: event_seq
+        description: Order within the session.
+        data_tests: [not_null]
+      - name: period
+        description: Football half (5 = penalty shoot-out); cricket innings; F1 lap.
+      - name: event_clock
+        description: Football mm:ss; cricket over.ball (0-based over); F1 'lap N'.
+      - name: is_goal
+        description: Football only. Shot scored or own goal for; includes shoot-out kicks (period 5).
+      - name: is_wicket
+        description: Cricket only.
+      - name: runs
+        description: Cricket only. Runs off the delivery, extras included.
+      - name: xg
+        description: Football only. StatsBomb expected goals for shots.
+      - name: details
+        description: JSON. Football the type-specific StatsBomb block; cricket the runs/extras breakdown.
+      - name: _raw_key
+        description: Raw-zone object the row came from (lineage).
+        data_tests: [not_null]

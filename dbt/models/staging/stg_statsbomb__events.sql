@@ -1,0 +1,31 @@
+-- One row per StatsBomb event (latest version per match; the clean zone already keeps only that).
+select
+    match_id,
+    event_id,
+    event_index,
+    period,
+    event_timestamp,
+    minute,
+    second,
+    type_name,
+    possession,
+    possession_team_id,
+    play_pattern_name,
+    team_id,
+    player_id,
+    position_name,
+    location_x,
+    location_y,
+    end_location_x,
+    end_location_y,
+    duration as duration_seconds,
+    under_pressure,
+    outcome_name,
+    shot_xg,
+    -- Pass recipient, when the event is a pass.
+    try_cast(json_extract_scalar(details, '$.pass.recipient.id') as bigint) as pass_recipient_id,
+    (type_name = 'Shot' and outcome_name = 'Goal') or type_name = 'Own Goal For' as is_goal,
+    details,
+    cast(dt as date) as match_date,
+    _raw_key
+from {{ source('clean', 'statsbomb_events') }}

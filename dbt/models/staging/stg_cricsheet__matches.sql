@@ -1,0 +1,26 @@
+-- One row per Cricsheet match (newest revision; the clean zone already keeps only that).
+select
+    match_id,
+    revision,
+    match_type,
+    gender,
+    team_type,
+    season,
+    start_date,
+    end_date,
+    city,
+    venue,
+    event_name,
+    event_stage,
+    team_1,
+    team_2,
+    toss_winner,
+    toss_decision,
+    winner,
+    result,
+    win_by_runs,
+    win_by_wickets,
+    method,
+    eliminator,
+    _raw_key
+from {{ source('clean', 'cricsheet_matches') }}

@@ -1,0 +1,33 @@
+# dbt-athena connection. No credentials here: boto3 uses the normal AWS chain
+# (`aws login` / AWS_PROFILE locally, the OIDC-assumed role in CI).
+#
+# Required env var: DBT_AWS_ACCOUNT_ID (bucket names carry the account ID).
+# Optional: DBT_TARGET (dev | prod, default dev), AWS_REGION (default us-east-1).
+#
+# Names match Terraform: workgroup sports-<env>, Glue databases sports_<env>_{lake,staging,marts},
+# query results in the artifacts bucket's expiring tmp/ prefix, table data under clean/dbt/.
+sports:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    dev:
+      type: athena
+      region_name: "{{ env_var('AWS_REGION', 'us-east-1') }}"
+      database: awsdatacatalog
+      schema: sports_dev
+      work_group: sports-dev
+      s3_staging_dir: "s3://sports-dev-artifacts-{{ env_var('DBT_AWS_ACCOUNT_ID') }}/tmp/athena/dev/"
+      s3_data_dir: "s3://sports-dev-clean-{{ env_var('DBT_AWS_ACCOUNT_ID') }}/dbt/"
+      s3_data_naming: schema_table_unique
+      threads: 4
+      num_retries: 2
+    prod:
+      type: athena
+      region_name: "{{ env_var('AWS_REGION', 'us-east-1') }}"
+      database: awsdatacatalog
+      schema: sports_prod
+      work_group: sports-prod
+      s3_staging_dir: "s3://sports-prod-artifacts-{{ env_var('DBT_AWS_ACCOUNT_ID') }}/tmp/athena/prod/"
+      s3_data_dir: "s3://sports-prod-clean-{{ env_var('DBT_AWS_ACCOUNT_ID') }}/dbt/"
+      s3_data_naming: schema_table_unique
+      threads: 4
+      num_retries: 2
