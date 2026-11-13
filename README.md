@@ -12,7 +12,7 @@ Practice data engineering project with live and historical sports data.
 | 2. CI skeleton (fmt, validate, tests, Checkov, pytest, plan on PR) | Done |
 | 3. Storage (S3 raw + clean zones, Glue database) | Applied (dev, prod) |
 | 4. Batch backfill Lambda (StatsBomb, Jolpica, Cricsheet, TheSportsDB) | Applied (dev, prod) — see `ingestion/backfill/README.md` |
-| 5. Processing (Glue raw → Parquet + Catalog) | In review — see `processing/glue/README.md` |
+| 5. Processing (Glue raw → Parquet + Catalog) | Merged; running on a stopgap Lambda engine until AWS re-enables Glue jobs — see `processing/glue/README.md` |
 | 6. Warehouse + dbt (Athena) | Next |
 
 ## Layout

@@ -42,6 +42,7 @@ jobs:
           - infra/modules/data_lake
           - infra/modules/backfill_lambda
           - infra/modules/glue_etl
+          - infra/modules/clean_lambda
           - infra/bootstrap
           - infra/envs/dev
           - infra/envs/prod

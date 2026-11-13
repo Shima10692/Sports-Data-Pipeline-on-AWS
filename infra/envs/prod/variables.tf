@@ -8,3 +8,14 @@ variable "project" {
   type        = string
   default     = "sports"
 }
+
+variable "processing_engine" {
+  description = "Raw-to-clean engine. \"glue\" is the design; \"lambda\" is the stopgap while AWS has Glue job creation blocked on the account. Flip back to \"glue\" when Support restores it."
+  type        = string
+  default     = "lambda"
+
+  validation {
+    condition     = contains(["glue", "lambda"], var.processing_engine)
+    error_message = "processing_engine must be \"glue\" or \"lambda\"."
+  }
+}

@@ -2,6 +2,8 @@
 
 One Glue 5.0 (Spark 3.5, Python 3.11) job, `sports-<env>-raw-to-clean`, turns the raw-zone JSON into Parquet tables in the clean zone and registers them in the Glue database `sports_<env>_lake`.
 
+> **Temporary: Lambda engine.** AWS currently blocks Glue job creation on this account (`CreateJob` → *Account … is denied access*; a support case is open). Until that is lifted, `processing_engine = "lambda"` (the default in `infra/envs/*/variables.tf`) runs the **same `clean_zone` code** in a Lambda function of the same name, using pyarrow instead of Spark. It writes the same S3 layout and registers the same catalog tables and partitions, so Athena and dbt cannot tell the difference. See [Lambda stopgap](#lambda-stopgap-and-switching-back-to-glue).
+
 ```
 processing/glue/
   glue_entry.py          Glue script (uploaded by Terraform)
@@ -11,6 +13,9 @@ processing/glue/
     rawkeys.py           raw key parsing, newest-version selection
     catalog.py           Glue table / partition registration
     job.py               Spark orchestration (the only Spark code)
+    lambda_job.py        STOPGAP: same steps in one Lambda process
+    lambda_handler.py    STOPGAP: Lambda entry point
+    parquet.py           STOPGAP: Arrow schema + partition writes (pyarrow)
   tests/                 pytest, offline (no Spark, no AWS)
 ```
 
@@ -57,6 +62,22 @@ The job prints one JSON summary line per table (`raw_objects`, `rows`, `partitio
 
 **Cost:** Flex execution, 2 × G.1X workers: about $0.29 per DPU-hour with a 1-minute minimum, so a full run over the current dev data costs a few cents. Nothing runs on a schedule; phase 9 adds orchestration.
 
+## Lambda stopgap and switching back to Glue
+```bash
+aws lambda invoke --function-name sports-dev-raw-to-clean   --cli-binary-format raw-in-base64-out --payload '{"sources":"jolpica"}' out.json && cat out.json
+```
+The event takes the same `sources` / `dates` selection as the Glue job (strings or lists). Each run replaces the files of every `dt` partition it rebuilds: it uploads the new file, then deletes the old ones. Lambda stops after 15 minutes, so the run checks the clock before each partition and, if time is short, returns `"complete": false` with a `resume` event. Invoke again with that event to finish. A full StatsBomb run (441,907 rows) took 35–50 s locally, so this should rarely happen.
+
+pyarrow comes from AWS's own **AWS SDK for pandas** layer. Terraform looks up its ARN from AWS's public SSM parameter, so no account ID is committed. Memory is 3,008 MB and a full run uses well under 1 GB, which stays inside the Lambda free tier.
+
+**Switching back once AWS Support restores Glue:**
+1. Set `default = "glue"` for `processing_engine` in `infra/envs/dev/variables.tf` and `infra/envs/prod/variables.tf`.
+2. Plan dev. Expect the Glue job to be added and the 4 `processing_lambda` resources to be destroyed. The Glue role, code and log group were never removed.
+3. Apply, run the Glue job once, check the row counts match, then do prod.
+4. Optional clean-up PR: delete `lambda_job.py`, `lambda_handler.py`, `parquet.py`, their tests, `infra/modules/clean_lambda`, and the `processing_lambda` module and variable.
+
+Both engines write into the same tables, so the data already written needs no migration. The first Glue run replaces the Lambda files in each partition it rewrites. Use `--dates all` to rewrite them all.
+
 ## Adding a table
 Add a `Table(...)` with its columns and a flattener to the source module and append it to that module's `TABLES`. Then add a test in `tests/test_sources.py`. The next run creates the catalog table. Changing a column type updates the table and the partitions the run rewrites; reprocess all dates (`--dates all`) so older partitions match.
 
@@ -66,5 +87,5 @@ Add a `Table(...)` with its columns and a flattener to the source module and app
 
 ## Tests
 ```bash
-pytest processing   # offline: fake S3 and fake Glue, no Spark
+pytest processing   # offline: fake S3 and fake Glue, no Spark (pyarrow for the Lambda engine)
 ```

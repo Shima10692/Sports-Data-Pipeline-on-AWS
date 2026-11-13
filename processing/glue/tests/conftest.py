@@ -1,4 +1,4 @@
-"""Offline fakes for the Glue job: no Spark, no network, no AWS."""
+"""Offline fakes for both engines: no Spark, no network, no AWS."""
 
 from __future__ import annotations
 
@@ -18,12 +18,14 @@ class FakeClientError(Exception):
 
 
 class FakeS3:
-    """list_objects_v2 paginator (2 keys per page, to exercise paging) and get_object."""
+    """list_objects_v2 paginator (2 keys per page, to exercise paging), get/put/delete."""
 
     def __init__(self, objects: dict[str, Any] | None = None):
         self.objects = {k: (v if isinstance(v, bytes) else json.dumps(v).encode()) for k, v in (objects or {}).items()}
         self.gets: list[str] = []
         self.prefixes: list[str] = []
+        self.puts: list[str] = []
+        self.deleted: list[str] = []
 
     def get_paginator(self, name: str):
         assert name == "list_objects_v2"
@@ -40,6 +42,17 @@ class FakeS3:
     def get_object(self, Bucket: str, Key: str):
         self.gets.append(Key)
         return {"Body": io.BytesIO(self.objects[Key])}
+
+    def put_object(self, Bucket: str, Key: str, Body: bytes):
+        self.puts.append(Key)
+        self.objects[Key] = Body
+
+    def delete_objects(self, Bucket: str, Delete: dict):
+        assert len(Delete["Objects"]) <= 1000
+        for o in Delete["Objects"]:
+            self.deleted.append(o["Key"])
+            del self.objects[o["Key"]]
+        return {}
 
 
 class FakeGlue:
