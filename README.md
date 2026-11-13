@@ -13,7 +13,8 @@ Practice data engineering project with live and historical sports data.
 | 3. Storage (S3 raw + clean zones, Glue database) | Applied (dev, prod) |
 | 4. Batch backfill Lambda (StatsBomb, Jolpica, Cricsheet, TheSportsDB) | Applied (dev, prod) — see `ingestion/backfill/README.md` |
 | 5. Processing (Glue raw → Parquet + Catalog) | Merged; running on a stopgap Lambda engine until AWS re-enables Glue jobs — see `processing/glue/README.md` |
-| 6. Warehouse + dbt (Athena) | Next |
+| 6. Warehouse + dbt (Athena workgroup, dbt-athena marts) | In review — see `dbt/README.md` |
+| 7. Streaming (Kinesis, pollers, Secrets Manager) | Next |
 
 ## Layout
 ```
@@ -22,7 +23,8 @@ infra/envs/dev|prod  Environment stacks (state keys dev/, prod/)
 infra/modules        Reusable Terraform modules, each with offline tests
 ingestion/           Backfill Lambda (phase 4); live pollers and Fargate later
 processing/glue      Glue job: raw JSON → clean Parquet + Glue Catalog (phase 5)
-dbt/ orchestration/ docs/
+dbt/                 dbt-athena project: staging views + marts fact_events, dim_* (phase 6)
+orchestration/ docs/
 ```
 
 ## Data lake (per environment)
@@ -34,14 +36,17 @@ dbt/ orchestration/ docs/
 
 All buckets are versioned, KMS-encrypted, private and TLS-only. Clean tables are registered in the Glue database `sports_<env>_lake`.
 
+dbt builds on top of the clean zone, through the Athena workgroup `sports-<env>`: staging views in `sports_<env>_staging`, mart tables in `sports_<env>_marts` (data under `clean/dbt/`).
+
 ## Checks (same as CI, `.github/workflows/pr.yml`)
 ```bash
 terraform fmt -check -recursive infra
-for d in infra/modules/state_backend infra/modules/github_env_roles infra/modules/data_lake infra/modules/backfill_lambda infra/modules/glue_etl infra/bootstrap; do
+for d in infra/modules/state_backend infra/modules/github_env_roles infra/modules/data_lake infra/modules/backfill_lambda infra/modules/glue_etl infra/modules/clean_lambda infra/modules/athena_warehouse infra/bootstrap; do
   (cd "$d" && terraform init -backend=false && terraform test)
 done
 pip install -r requirements-dev.txt
 pytest
 checkov --config-file .checkov.yaml   # on Windows: set PYTHONUTF8=1 first
+(cd dbt && pip install -r requirements.txt && DBT_AWS_ACCOUNT_ID=000000000000 dbt parse --profiles-dir .)
 ```
 Every PR also gets a `terraform plan` for dev and prod posted as a comment, using the read-only plan roles via OIDC.

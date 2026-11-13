@@ -1,0 +1,33 @@
+name: sports
+version: "1.0.0"
+config-version: 2
+profile: sports
+require-dbt-version: [">=1.11.0", "<2.0.0"]
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+clean-targets: ["target", "dbt_packages", "logs"]
+
+vars:
+  # The clean-zone Glue database defaults to <target schema>_lake (sports_dev_lake / sports_prod_lake);
+  # override with --vars '{lake_database: ...}'.
+  # StatsBomb match used by the known-answer test (2022 World Cup final, 3-3, Argentina won 4-2 on penalties).
+  known_answer_match_id: 3869685
+
+models:
+  sports:
+    # Schemas are <target schema>_<custom>: sports_dev_staging, sports_dev_marts (Glue databases from Terraform).
+    staging:
+      +schema: staging
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
+      +format: parquet
+      +write_compression: snappy
+      +table_type: hive
+
+data_tests:
+  sports:
+    +severity: error

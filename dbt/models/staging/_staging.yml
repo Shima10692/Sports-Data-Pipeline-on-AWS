@@ -1,0 +1,126 @@
+version: 2
+
+models:
+  - name: stg_statsbomb__matches
+    description: StatsBomb matches, newest download of each match.
+    columns:
+      - name: match_id
+        data_tests: [unique, not_null]
+      - name: match_date
+        data_tests: [not_null]
+      - name: home_team_id
+        data_tests: [not_null]
+      - name: away_team_id
+        data_tests: [not_null]
+
+  - name: stg_statsbomb__events
+    description: StatsBomb events with the goal flag and pass recipient pulled out.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: match_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_statsbomb__matches')
+                field: match_id
+      - name: is_goal
+        description: Shot scored or own goal (credited to the team it was scored for). Includes shoot-out kicks (period 5).
+
+  - name: stg_statsbomb__lineups
+    description: StatsBomb squads per match.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [match_id, player_id]
+    columns:
+      - name: player_id
+        data_tests: [not_null]
+
+  - name: stg_cricsheet__matches
+    description: Cricsheet match summaries.
+    columns:
+      - name: match_id
+        data_tests: [unique, not_null]
+      - name: team_1
+        data_tests: [not_null]
+      - name: team_2
+        data_tests: [not_null]
+
+  - name: stg_cricsheet__deliveries
+    description: Cricsheet ball-by-ball with the bowling team added.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [match_id, innings_number, over_number, ball_in_over]
+    columns:
+      - name: batter
+        data_tests: [not_null]
+      - name: bowler
+        data_tests: [not_null]
+      - name: bowling_team
+        data_tests: [not_null]
+
+  - name: stg_jolpica__races
+    description: F1 race weekends, newest download of each (season, round).
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round]
+    columns:
+      - name: race_date
+        data_tests: [not_null]
+
+  - name: stg_jolpica__results
+    description: F1 classifications (race, sprint, qualifying), one row per driver per session.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [session_type, season, round, driver_id]
+    columns:
+      - name: session_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [race, sprint, qualifying]
+      - name: constructor_id
+        data_tests: [not_null]
+
+  - name: stg_jolpica__pitstops
+    description: F1 pit stops.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [season, round, driver_id, stop]
+
+unit_tests:
+  - name: matches_keep_newest_download_per_match
+    description: A later download of one match must not drop matches that were only in an earlier download.
+    model: stg_statsbomb__matches
+    given:
+      - input: source('clean', 'statsbomb_matches')
+        rows:
+          - {match_id: 1, home_score: 0, dt: "2026-11-01", _raw_key: a}
+          - {match_id: 1, home_score: 2, dt: "2026-11-05", _raw_key: b}
+          - {match_id: 2, home_score: 1, dt: "2026-11-01", _raw_key: c}
+    expect:
+      rows:
+        - {match_id: 1, home_score: 2, snapshot_dt: "2026-11-05"}
+        - {match_id: 2, home_score: 1, snapshot_dt: "2026-11-01"}
+
+  - name: own_goals_and_shootout_kicks_count_as_goals
+    model: stg_statsbomb__events
+    given:
+      - input: source('clean', 'statsbomb_events')
+        rows:
+          - {event_id: e1, type_name: Shot, outcome_name: Goal, dt: "2022-12-18"}
+          - {event_id: e2, type_name: Shot, outcome_name: Saved, dt: "2022-12-18"}
+          - {event_id: e3, type_name: Own Goal For, dt: "2022-12-18"}
+          - {event_id: e4, type_name: Own Goal Against, dt: "2022-12-18"}
+    expect:
+      rows:
+        - {event_id: e1, is_goal: true}
+        - {event_id: e2, is_goal: false}
+        - {event_id: e3, is_goal: true}
+        - {event_id: e4, is_goal: false}

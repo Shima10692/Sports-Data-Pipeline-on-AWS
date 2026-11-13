@@ -27,3 +27,18 @@ output "raw_to_clean_function_name" {
   description = "Stopgap raw-to-clean Lambda (null while processing_engine = \"glue\"); invoke with --payload '{\"sources\": \"jolpica\"}'."
   value       = one(module.processing_lambda[*].function_name)
 }
+
+output "athena_workgroup_name" {
+  description = "Athena workgroup for dbt (DBT_ATHENA_WORKGROUP) and ad-hoc queries."
+  value       = module.warehouse.workgroup_name
+}
+
+output "dbt_marts_database_name" {
+  description = "Glue database holding the dbt marts (fact_events, dim_*)."
+  value       = module.warehouse.marts_database_name
+}
+
+output "dbt_data_location" {
+  description = "S3 prefix dbt writes table data under (DBT_S3_DATA_DIR)."
+  value       = module.warehouse.dbt_data_location
+}

@@ -1,0 +1,5 @@
+# dbt toolchain for this project. Pinned for repeatable runs (CI and local).
+dbt-core==1.11.17
+dbt-athena==1.11.1
+# Needed by boto3 for credentials from `aws login` (the login credential provider).
+botocore[crt]

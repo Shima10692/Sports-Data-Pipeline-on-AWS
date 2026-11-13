@@ -65,3 +65,13 @@ module "processing_lambda" {
   glue_database_name = module.data_lake.glue_database_name
   source_dir         = "${path.root}/../../../processing/glue"
 }
+
+# Phase 6: Athena workgroup + Glue databases that dbt builds staging views and marts into.
+module "warehouse" {
+  source = "../../modules/athena_warehouse"
+
+  project               = var.project
+  environment           = "dev"
+  clean_bucket_name     = module.data_lake.clean_bucket_name
+  artifacts_bucket_name = module.data_lake.artifacts_bucket_name
+}
